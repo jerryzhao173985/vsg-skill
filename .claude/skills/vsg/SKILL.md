@@ -114,9 +114,13 @@ When a header and an example disagree on a signature, the **header wins** — th
 | user casts real-time shadows from a light | references/components/shadows.md | `ShadowSettings`/`HardShadows`/`SoftShadows`/`PCSS` on `light->shadowSettings`; tune `view->viewDependentState` |
 | user shows multiple views or multiple windows | references/components/multiview.md | several `View`s in one `RenderGraph` (side-by-side / inset via `ClearAttachments`) or one `CommandGraph` per `Window` |
 | user implements mouse picking / ray or box selection | references/components/intersection.md | `LineSegmentIntersector`/`PolytopeIntersector`; shader-free highlight via `vsg::Switch` |
+| user loads and plays an animation from a model | references/components/animation.md | `FindAnimations` + `viewer->animationManager->play`; driven by `viewer->update()` |
+| user renders text labels | references/components/text.md | `Text` + `Font` + `StandardLayout` + `setup()`; Cpu vs Gpu layout technique |
 | user adds camera manipulation or event handling | references/components/trackball.md | `Trackball`, `CloseHandler`, the `Visitor` handler model |
 | user wires rendering (command graph / render graph / view) | references/components/commandgraph.md | `createCommandGraphForView`, manual composition |
 | user generates procedural geometry (box/sphere/…) | references/components/builder.md | `Builder` + `GeometryInfo` + `StateInfo` |
+| user builds a custom mesh from raw vertex/index arrays | references/components/custom-geometry.md | data + `GraphicsPipelineConfigurator` (stock `ShaderSet`) + `VertexIndexDraw`; there is no `vsg::Mesh` class |
+| user renders transparent / translucent geometry | references/components/transparency.md | enable `StateInfo.blending` + wrap each translucent node in `DepthSorted`; `compile()` auto-creates the back-to-front `Bin` |
 | user loads or saves models, or sets IO options | references/components/io.md | `vsg::read`/`read_cast`/`write`, `Options`, vsgXchange |
 | user wants a worked example program to copy | references/examples/index.md | annotated real vsgExamples programs with exact cites |
 | user builds a model viewer | references/examples/model-viewer.md | the canonical load→frame→orbit→render skeleton (`vsghelloworld`) |
@@ -141,9 +145,13 @@ Each bullet's identifier is the contract-section file basename under `references
 - `shadows` — `ShadowSettings`/`HardShadows`/`SoftShadows`/`PercentageCloserSoftShadows` on `light->shadowSettings`: real-time shadow maps from a directional/spot light, tuned on `view->viewDependentState`.
 - `multiview` — several `vsg::View`s in one window (side-by-side, or inset via a scissored `ClearAttachments`) or several `vsg::Window`s (one `CommandGraph` each).
 - `intersection` — `LineSegmentIntersector`/`PolytopeIntersector` for mouse picking / box-select; shader-free highlight via `vsg::Switch`.
+- `animation` — `FindAnimations` + `viewer->animationManager->play(...)`: discover and play keyframe/morph/skeletal animations from a loaded model.
+- `text` — `Text` + `Font` + `StandardLayout`: signed-distance-field text labels; load a font, lay out, `setup()`, add to the scene.
 - `trackball` — `vsg::Trackball` + event handlers (`CloseHandler`), attached to the `Viewer`.
 - `commandgraph` — `vsg::CommandGraph` + `RenderGraph` + `View`: the recording wiring; `createCommandGraphForView` builds it.
 - `builder` — `vsg::Builder`: procedural geometry (box/sphere/quad/cylinder/cone/capsule/disk/height-field) from `GeometryInfo` + `StateInfo`.
+- `custom-geometry` — hand-built mesh: `vec3Array`/`ushortArray` data + `GraphicsPipelineConfigurator` (stock `ShaderSet`) + `VertexIndexDraw`; there is no `vsg::Mesh` class.
+- `transparency` — correct alpha blending: enable `StateInfo.blending` + wrap each translucent node in `DepthSorted` (positive `binNumber` → `compile()` auto-creates a back-to-front `Bin`).
 - `io` — `vsg::read` / `write` / `Options`: load/save scene graphs (native `.vsgt`/`.vsgb` + vsgXchange formats).
 
 ## Hard rules
