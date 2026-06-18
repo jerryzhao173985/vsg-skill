@@ -1,0 +1,21 @@
+# Anti-patterns — vsg
+
+A Bad → Good → Why registry of the VSG-specific traps that fire most often when generating C++ VSG code. These mirror the `## Hard rules` in `SKILL.md`; the per-component files carry the full context. Not required reading during generation — it is the audit/slug-resolution surface.
+
+| Bad | Good | Why |
+|---|---|---|
+| `auto g = new vsg::Group();` | `auto g = vsg::Group::create();` | VSG objects are intrusively ref-counted via `vsg::Object`; `~Object()` is `protected`, so `new`/manual `delete` won't compile. `create()` returns a `ref_ptr` holding the first reference. (`include/vsg/core/Object.h:182`, `include/vsg/core/Inherit.h:35`) |
+| `class MyNode : public vsg::Group { … };` | `class MyNode : public vsg::Inherit<vsg::Group, MyNode> { … };` | Deriving directly skips `create()`, ref-counting, RTTI (`type_info`/`is_compatible`), and `accept()` dispatch — all wired by `Inherit`. (`include/vsg/core/Inherit.h:27`) |
+| Entering the frame loop without `viewer->compile()` | `viewer->assignRecordAndSubmitTaskAndPresentation({cg}); viewer->compile();` then loop | Vulkan objects in the subgraph are created during `compile()`; recording an uncompiled graph is invalid. Compile once, after wiring, before the loop. (`include/vsg/app/Viewer.h:107`, `examples/app/vsghelloworld/vsghelloworld.cpp:74`) |
+| `viewer->compile();` before `addWindow`/`assignRecord…` | wire window + tasks first, then `compile()` | `compile()` compiles what is wired; calling it before the scene/tasks exist compiles nothing. (`examples/app/vsghelloworld/vsghelloworld.cpp:71-74`) |
+| `auto w = vsg::Window::create(traits); w->extent2D();` (no null check) | `auto w = vsg::Window::create(traits); if (!w) return 1;` | `Window::create` returns an empty `ref_ptr` on failure (no Vulkan device, bad traits). (`examples/app/vsghelloworld/vsghelloworld.cpp:30-35`) |
+| `auto n = vsg::read_cast<vsg::Node>(file, opt); scene->addChild(n);` (no null check) | `if (auto n = vsg::read_cast<vsg::Node>(file, opt)) scene->addChild(n);` | `read_cast` returns null when the file is missing or no `ReaderWriter` handles the format. (`examples/app/vsghelloworld/vsghelloworld.cpp:25-26`) |
+| `while (viewer->active()) { /* manual poll */ … }` | `while (viewer->advanceToNextFrame()) { handleEvents(); update(); recordAndSubmit(); present(); }` | `advanceToNextFrame()` polls events and reports inactivity itself; the 4-call loop body order is canonical. (`examples/app/vsghelloworld/vsghelloworld.cpp:77-87`) |
+| `geomInfo.position = vsg::dvec3(x, y, z);` | `geomInfo.position = vsg::vec3(x, y, z);` (offset world-scale via a `MatrixTransform`) | `Builder::GeometryInfo` fields are float (`vec3`/`mat4`); scene transforms are double (`dmat4`). Don't cross them. (`include/vsg/utils/Builder.h:63`, `include/vsg/nodes/MatrixTransform.h:30`) |
+| `transform->setMatrix(m);` / `mt->setPosition(p);` | `transform->matrix = m;` (compose with `vsg::translate/rotate/scale`) | `MatrixTransform::matrix` is a plain public `dmat4` member — there is no setter, no `setPosition`/`setRotation`/`setScale`. (`include/vsg/nodes/MatrixTransform.h:30`) |
+| `vsg::rotate(90.0, 1.0, 0.0, 0.0)` | `vsg::rotate(vsg::radians(90.0), 1.0, 0.0, 0.0)` | `vsg::rotate` takes radians, not degrees. (`include/vsg/maths/transform.h:45`, `include/vsg/maths/common.h:32`) |
+| Editing `group->children` during `recordAndSubmit()` | mutate the scene graph outside recording (or via viewer update operations) | `RecordTraversal` reads the graph on the record thread; concurrent structural edits race it. (`include/vsg/nodes/Group.h:56`) |
+| `static_cast<vsg::StateGroup*>(node.get())` blindly | `if (auto sg = node.cast<vsg::StateGroup>()) …` | VSG casts use its own RTTI (`is_compatible`), return null on mismatch, and must be checked. (`include/vsg/core/ref_ptr.h:192`, `include/vsg/core/Object.h:95`) |
+| Storing a child as a raw `vsg::Node*` member | store `vsg::ref_ptr<vsg::Node>` | A raw pointer does not keep the object alive; the last `ref_ptr` dropping deletes it out from under you. (`include/vsg/core/ref_ptr.h:21`) |
+
+See also `## Things to never invent` in each `references/components/<name>.md` for per-class hallucination guards (e.g. `Builder::createTorus`, `viewer->run()`, `View::setCamera`, `observer_ptr::expired` — none exist).

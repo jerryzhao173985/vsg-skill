@@ -1,0 +1,8 @@
+# build artifacts & scratch
+build/
+.omc/
+.extract-ds-skill-scratch/
+*.o
+*.dylib
+*.so
+.DS_Store

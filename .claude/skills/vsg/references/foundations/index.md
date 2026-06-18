@@ -1,0 +1,8 @@
+# Foundations
+
+The architecture-level mental models behind VSG — load these to understand *why* the APIs are shaped as they are, so you generate idiomatic code rather than mechanically-correct-but-wrong code. Each file grounds its behavioural claims in the actual `src/vsg/` implementation (not just header doc-comments), with `file:line` cites resolvable against the [VulkanSceneGraph repo](https://github.com/vsg-dev/VulkanSceneGraph). The concept grouping mirrors the project's own structure (cf. the [vsgTutorial](https://github.com/vsg-dev/vsgTutorial): Foundations / Scene Graph / Application).
+
+- [object-model](./object-model.md) — how every VSG object is allocated, typed, and traversed: intrusive ref-counting in `Object`, the `T::create()` factory + `Inherit<>` CRTP, `ref_ptr` vs `observer_ptr`, the `Allocator`, and the `Visitor` double-dispatch model.
+- [scene-graph](./scene-graph.md) — what the scene graph *is* and how it is walked: the `Node`/`Group` DAG, internal vs leaf draw nodes, how `StateGroup` decorates subgraphs with Vulkan state, and the `Visitor`/`RecordTraversal`/`CullTraversal` family.
+- [application-and-rendering](./application-and-rendering.md) — how a frame happens: the `Viewer` owning `RecordAndSubmitTask`s + `Presentation`s, the `CommandGraph→RenderGraph→View→scene` recording hierarchy, the `compile()` → loop (`advanceToNextFrame`/`handleEvents`/`update`/`recordAndSubmit`/`present`) lifecycle, and optional threading.
+- [io-and-data](./io-and-data.md) — data, IO, serialization, and maths: the `Data`/`Array<T>`/`Value<T>` hierarchy, `read`/`write`/`Options`/`ReaderWriter` dispatch, native `.vsgt`/`.vsgb` serialization, and float-vs-double precision (`dvec3`/`dmat4`).
